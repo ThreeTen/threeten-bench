@@ -130,7 +130,7 @@ public class LocalDateBenchmark {
             } else if (month < 12) {
                 return LocalDate.of(year, month + 1, (int) (dom - monthLen));
             } else {
-                return LocalDate.of(year + 1, month, (int) (dom - monthLen));
+                return LocalDate.of(year + 1, 1, (int) (dom - monthLen));
             }
         }
         long epDay = Math.addExact(input.toEpochDay(), daysToAdd);
