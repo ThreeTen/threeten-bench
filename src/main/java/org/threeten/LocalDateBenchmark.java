@@ -62,8 +62,18 @@ public class LocalDateBenchmark {
     }
 
     @Benchmark
-    public LocalDate bmkPlusDays1Better3() {
-        return plusDaysBetter3(DATE, arg);
+    public LocalDate bmkPlusDays1Better3a() {
+        return plusDaysBetter3a(DATE, arg);
+    }
+
+    @Benchmark
+    public LocalDate bmkPlusDays1Better3b() {
+        return plusDaysBetter3b(DATE, arg);
+    }
+
+    @Benchmark
+    public LocalDate bmkPlusDays1Better3c() {
+        return plusDaysBetter3c(DATE, arg);
     }
 
     @Benchmark
@@ -116,12 +126,12 @@ public class LocalDateBenchmark {
     // 3.7x speedup (422 vs 113) for same month
     // 3.7x speedup (417 vs 113) for next month
     // little change non-optimized path (113 vs 113)
-    public LocalDate plusDaysBetter3(LocalDate input, long daysToAdd) {
+    public LocalDate plusDaysBetter3a(LocalDate input, long daysToAdd) {
         if (daysToAdd == 0) {
             return input;
         }
         long dom = input.getDayOfMonth() + daysToAdd;
-        if (dom > 0 && dom <= 59) {  // 59th Jan is 28th Feb
+        if (dom > 0 && dom <= 59) { // 59th Jan is 28th Feb
             int monthLen = input.lengthOfMonth();
             int month = input.getMonthValue();
             int year = input.getYear();
@@ -131,6 +141,58 @@ public class LocalDateBenchmark {
                 return LocalDate.of(year, month + 1, (int) (dom - monthLen));
             } else {
                 return LocalDate.of(year + 1, 1, (int) (dom - monthLen));
+            }
+        }
+        long epDay = Math.addExact(input.toEpochDay(), daysToAdd);
+        return LocalDate.ofEpochDay(epDay);
+    }
+
+    // faster than 3a for same month, little change otherwise
+    public LocalDate plusDaysBetter3b(LocalDate input, long daysToAdd) {
+        if (daysToAdd == 0) {
+            return input;
+        }
+        long dom = input.getDayOfMonth() + daysToAdd;
+        if (dom > 0 && dom <= 28) { // same month
+            return input.withDayOfMonth((int) dom);
+        }
+        if (dom > 0 && dom <= 59) { // 59th Jan is 28th Feb
+            int monthLen = input.lengthOfMonth();
+            int month = input.getMonthValue();
+            int year = input.getYear();
+            if (dom <= monthLen) {
+                return LocalDate.of(year, month, (int) dom);
+            } else if (month < 12) {
+                return LocalDate.of(year, month + 1, (int) (dom - monthLen));
+            } else {
+                return LocalDate.of(year + 1, 1, (int) (dom - monthLen));
+            }
+        }
+        long epDay = Math.addExact(input.toEpochDay(), daysToAdd);
+        return LocalDate.ofEpochDay(epDay);
+    }
+
+    // marginally faster than 3b for same month, little change otherwise
+    public LocalDate plusDaysBetter3c(LocalDate input, long daysToAdd) {
+        if (daysToAdd == 0) {
+            return input;
+        }
+        long dom = input.getDayOfMonth() + daysToAdd;
+        if (dom > 0) {
+            if (dom <= 28) { // same month
+                return input.withDayOfMonth((int) dom);
+            }
+            if (dom <= 59) { // 59th Jan is 28th Feb
+                int monthLen = input.lengthOfMonth();
+                int month = input.getMonthValue();
+                int year = input.getYear();
+                if (dom <= monthLen) {
+                    return LocalDate.of(year, month, (int) dom);
+                } else if (month < 12) {
+                    return LocalDate.of(year, month + 1, (int) (dom - monthLen));
+                } else {
+                    return LocalDate.of(year + 1, 1, (int) (dom - monthLen));
+                }
             }
         }
         long epDay = Math.addExact(input.toEpochDay(), daysToAdd);
@@ -156,7 +218,7 @@ public class LocalDateBenchmark {
                 // next month (28 guarantees only one month later)
                 dom -= monthLen;
                 if (month == 12) {
-                    return LocalDate.of(year + 1 , 1, (int) dom);
+                    return LocalDate.of(year + 1, 1, (int) dom);
                 } else {
                     return LocalDate.of(year, month + 1, (int) dom);
                 }
